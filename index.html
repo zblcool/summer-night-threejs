@@ -46,7 +46,7 @@
       background-color: rgba(0, 0, 0, 0);
     }
   </style>
-  <title>Virtual Museum</title>
+  <title>Summer Night</title>
 </head>
 
 <body>
@@ -57,16 +57,13 @@
   <div id="blocker">
     <div id="content">
       <!-- <div>2020 THE IMMERSIVE EXPERIENCE</div> -->
-      <h1>2020 THE IMMERSIVE EXPERIENCE</h1>
+      <h1>Summer Night</h1>
       <p>
-        2020 was a year that will go down in history. It will be studied for
-        generations to come, and will no doubt make a lasting impact on future
-        generations. But how we look back on this year can make all the
-        difference. Our immersive experience gives you the opportunity to
-        choose your own adventure.
+        This is a quiet summer night <br>
+        If you remember the fireflies in the field when you were a child.
+
         <br />
-        Choose darkness, and experience the hardship and anguish that many of
-        us endured in 2020. Or choose light, and find the silver lining.
+      
       </p>
       <a class="btn" onclick="hideMe()">START EXPERIENCE</a>
     </div>
@@ -85,8 +82,10 @@
 <script src="./lib/jquery.js"></script>
 <script src="https://mamboleoo.be/learnThree/demos/OBJLoader.js"></script>
 <script src="/lib/PointerLockControls.js"></script>
+<script type="text/javascript" src="/lib/dat.gui.js"></script>
 
-<script>
+<script type="module">
+  import { GUI } from './lib/dat.gui.js';
   var scene;
   var camera;
   var renderer;
@@ -98,6 +97,9 @@
   var moveRight = false;
   var jump = false;
 
+  var countstep = true;
+
+
   var startTime = performance.now();
   var direction = new THREE.Vector3();
   var velocity = new THREE.Vector3();
@@ -108,11 +110,24 @@
 
   var torusKnotMesh;
   var cameraPosition = new THREE.Vector3(0, 10, -10);
-  var cameraDirection = new THREE.Vector3(5, 5, 20);
+  var cameraDirection = new THREE.Vector3(0, 0, 0);
 
-  var SEPARATION = 50,
-    AMOUNTX = 50,
-    AMOUNTY = 50;
+  const firefly = new THREE.TextureLoader().load("assets/lightfly.png");
+  var  particles ;
+  var particle;
+  var  star_d ;
+  var  star_d_speed ;
+  var  star_s_speed ;
+  var count = 0;
+
+  var pointTemps;
+
+
+  var vec = new THREE.Vector3();
+  var SEPARATION = 20,
+    AMOUNTX = 5,
+    AMOUNTY = 5,
+    AMOUNTZ = 5;
   // var particles,
   //   particle,
   //   count = 0;
@@ -122,6 +137,17 @@
     // var backgroundLoader = new THREE.CubeTextureLoader();
     // var bgTexure = backgroundLoader.load("assets/night.jpg");
     scene.background = new THREE.Color(0xa000000);
+
+    // const backLoader = new THREE.TextureLoader();
+    // const backTexture = backLoader.load(
+    //   './assets/dikhololo_night.jpg',
+    //   () => {
+    //     const rt = new THREE.WebGLCubeRenderTarget(backTexture.image.height);
+    //     rt.fromEquirectangularTexture(renderer, backTexture);
+    //     scene.background = rt;
+    //   });
+
+
     // scene.fog = new THREE.Fog(0xa0a0a0, 100, 300);
     // var reflectionCube  = new THREE.CubeTextureLoader()
     //     .setPath('./assets/')
@@ -143,7 +169,36 @@
       0.1, //near
       2000 // far
     );
+ 
+    class ColorGUIHelper {
+    constructor(object, prop) {
+      this.object = object;
+      this.prop = prop;
+    }
+    get value() {
+      return `#${this.object[this.prop].getHexString()}`;
+    }
+    set value(hexString) {
+      this.object[this.prop].set(hexString);
+    }
+  }
+  {
+    const Ambitcolor = 0x000000;
+    const Ambitntensity = 1;
+    const ambitLit = new THREE.AmbientLight(Ambitcolor, Ambitntensity);
+    scene.add(ambitLit);
+    const gui = new GUI();
+    var lightFolder = gui.addFolder("Light");
 
+    
+    lightFolder.addColor(new ColorGUIHelper(ambitLit, 'color'), 'value').name('color');
+    lightFolder.add(ambitLit, 'intensity', 0, 2, 0.01);
+    lightFolder.open();
+  }
+
+
+    // var ambitLit = new THREE.AmbientLight(0x000000)
+    // scene.add(ambitLit);
     // particles = new Array();
     // const map = new THREE.TextureLoader().load('assets/ball.png');
     // var material = new THREE.SpriteMaterial({map:map, color: 0xffffff });
@@ -166,6 +221,32 @@
 
     scene.add(camera);
 
+
+    particles = new Array();
+    star_d = new Array();
+    star_d_speed = new Array();
+    star_s_speed = new Array();
+    var moveMaterial = new THREE.SpriteMaterial({
+      map: firefly,
+      color: 0xffff00,
+    });
+    var littlestar = new THREE.Sprite(moveMaterial);
+    var i = 0;
+    for (var ix = 0; ix < AMOUNTX; ix++) {
+      for (var iy = 0; iy < AMOUNTY; iy++) {
+        for (var iz = 0; iz < AMOUNTZ; iz++) {
+          particle = particles[i] = littlestar.clone();
+          star_d[i] = vec.clone().set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+          star_d_speed[i] = vec.clone().set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+          star_s_speed[i] = Math.random() - 0.5;
+          i++;
+          particle.position.x = ix * SEPARATION - (AMOUNTX * SEPARATION) / 2 + ((Math.random()-0.5) * SEPARATION*16);
+          particle.position.y = iy * SEPARATION - (AMOUNTY * SEPARATION) / 2 + ((Math.random()-0.5) * SEPARATION*6);
+          particle.position.z = iz * SEPARATION - (AMOUNTZ * SEPARATION) / 2 + ((Math.random()-0.5) * SEPARATION*8);
+          scene.add(particle);
+        }
+      }
+    }
     var onKeyDown = function (e) {
       switch (e.keyCode) {
         case 87:
@@ -264,7 +345,7 @@
       side: THREE.DoubleSide,
     });
 
-    var exhibitionGeometry = new THREE.PlaneGeometry(240, 140);
+    var exhibitionGeometry = new THREE.PlaneGeometry(500, 340);
     var exibitionMesh = new THREE.Mesh(
       exhibitionGeometry,
       exhibitionMaterial
@@ -297,9 +378,9 @@
 
     //  video 2
 
-   
 
-    // addExhibition("drop.mp4", 10, 25, -200, 50, 30);
+
+    addExhibition("jupiter.mov", 10, 100, 150, 400, 220);
     // addExhibition("Touch.mp4", -10, 20, -280, 80, 20);
     // var loader = new THREE.FontLoader();
 
@@ -332,7 +413,7 @@
 
     // load a sound and set it as the PositionalAudio object's buffer
     const audioLoader = new THREE.AudioLoader();
-    audioLoader.load("assets/grok.mp3", function (buffer) {
+    audioLoader.load("assets/SummernightinBrittany.mp3", function (buffer) {
       sound.setBuffer(buffer);
       sound.setRefDistance(20);
       sound.play();
@@ -367,15 +448,33 @@
     pointLight.position.set(50, 50, 50);
     scene.add(pointLight);
 
-    for (let i = 0; i < 20; i++) {
-      var pointTemp = new THREE.PointLight(0xFFFF00,1,20);
-      pointTemp.position.set((Math.random()-0.5)*100,
-                              20,
-                              (Math.random()-0.5)*100)
-      scene.add(pointTemp) ;
+    const lightForBlackHole = new THREE.PointLight(0xFFFFff, 1, 150);
+    lightForBlackHole.position.set(10,100,-150)
+    scene.add(lightForBlackHole);
+
+    const lightForMountain = new THREE.PointLight(0xFFFFff, 1, 10);
+    lightForMountain.position.set(10,20,-30)
+    scene.add(lightForMountain);
+
+    const lightForMountainTop = new THREE.PointLight(0xFFFFff, 1, 10);
+    lightForMountainTop.position.set(40,40,-35)
+    scene.add(lightForMountainTop);
+
+    const lightForJupiter = new THREE.PointLight(0xFFFFff, 1, 50);
+    lightForJupiter.position.set(10,80,130)
+    scene.add(lightForJupiter);
+
+    pointTemps = new Array();
+
+    for (let i = 0; i < 30; i++) {
+      var pointTemp = pointTemps[i] =  new THREE.PointLight(0xFFFF00, 1, 20);
+      pointTemp.position.set((Math.random() - 0.5) * 100,
+        20,
+        (Math.random() - 0.5) * 100)
+      scene.add(pointTemp);
     }
 
-    scene.add(new THREE.AmbientLight(0x404040));
+   
 
     spotLight = new THREE.PointLight(0x000000, 1, 100);
     spotLight.position.set(10, 10, 10);
@@ -397,20 +496,8 @@
     sprite.rotateY(Math.PI / 2);
     scene.add(sprite);
 
-    var spriteGir = new THREE.TextureLoader().load("assets/girrafe.png");
-    var spriteGirMaterial = new THREE.SpriteMaterial({
-      map: spriteGir,
-      depthWrite: false,
-    });
 
-    var spriteGir = new THREE.Sprite(spriteGirMaterial);
-    spriteGir.scale.set(10, 10, 1);
-    spriteGir.position.y = 10;
-    spriteGir.position.x = -45;
-    spriteGir.position.z = -120;
-    spriteGir.rotateY(Math.PI / 2);
-    scene.add(spriteGir);
-    // obj();
+    obj();
     LoadObject();
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -448,20 +535,21 @@
     // instantiate a loader
     var loader = new THREE.OBJLoader();
 
-    var material = new THREE.MeshPhongMaterial({ color: 0xf3f3f3 });
-    // load a resource
-    loader.load("obj/stickman.OBJ", function (group) {
-      geometry = group.children[0].geometry;
-      geometry.attributes.uv2 = geometry.attributes.uv;
-      geometry.center();
-      mesh = new THREE.Mesh(geometry, material);
-      mesh.scale.multiplyScalar(1 / 8.25);
-      mesh;
-      mesh.position.y = 10.5;
-      mesh.position.x = 40;
-      mesh.position.z = 0;
-      scene.add(mesh);
-    });
+    // var material = new THREE.MeshPhongMaterial({ color: 0xf3f3f3 });
+    // load a resource\
+
+
+    for (let i = 0; i < 20; i++) {
+      loader.load('./obj/LowPolyGrass.obj', (root) => {
+        root.scale.multiplyScalar(7);
+        
+        root.position.z = Math.random() * 20;
+        root.position.x = (Math.random() - 0.5) * 100;
+        scene.add(root);
+      });
+
+
+    }
   }
 
   function addExhibition(url, x, y, z, width, height) {
@@ -534,10 +622,10 @@
   var Forward = true;
   var Right = true;
   const clock = new THREE.Clock();
-  angleX = 0;
-  angleY = 0;
-  angleZX = 0;
-  angleZY = 0;
+  var angleX = 0;
+  var angleY = 0;
+  var angleZX = 0;
+  var angleZY = 0;
 
   var uping = true;
   var jumpSpeed = 0.2;
@@ -711,6 +799,26 @@
       cameraPosition.z + cameraDirection.z
     );
 
+    if (countstep) {
+      for (var i = 0; i < particles.length; i++) {
+        particle = particles[i];
+        particle.scale.x = particle.scale.y = Math.sin(star_s_speed[i] * count * 150) * 2 + 1.5;
+        var d = star_d[i];
+        var ds = star_d_speed[i];
+        particle.position.x += d.x * Math.cos(ds.x * count) / 3;
+        particle.position.y += d.y * Math.cos(ds.y * count) / 3;
+        particle.position.z += d.z * Math.cos(ds.z * count) / 3;
+      }
+      for (let i = 0; i < pointTemps.length; i++) {
+      var pointTemp = pointTemps[i]
+      pointTemp.position.x += d.x * Math.cos(ds.x * count) / 7;
+      pointTemp.position.y = d.y * Math.cos(ds.y * count) / 3;
+      pointTemp.position.z += d.z * Math.cos(ds.z * count) / 7;
+    }
+    }
+    count += 0.0005;
+    countstep = !countstep;
+
     camera.updateProjectionMatrix();
     // torusKnotMesh.rotation.y += 0.004;
     // spotLight.rotation.x+=0.01;
@@ -735,7 +843,11 @@
     renderer.render(scene, camera);
   };
   window.addEventListener("resize", MyResize);
-  function hideMe() {
+
+</script>
+
+<script>
+    function hideMe() {
     // console.log(document.getElementsByClassName("content"));
     document.getElementById("content").style.display = "none";
     document.getElementById("blocker").style.display = "none";
@@ -746,5 +858,4 @@
     document.getElementById("secondBlocker").style.display = "none";
   }
 </script>
-
 </html>
